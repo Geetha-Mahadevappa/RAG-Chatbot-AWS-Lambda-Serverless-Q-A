@@ -1,0 +1,555 @@
+Source: https://aws.amazon.com/lambda/pricing/
+Title: AWS Lambda Pricing
+
+AWS Lambda
+Overview
+Features
+Pricing
+Getting Started
+Resources
+More
+AWS Lambda pricing
+Serverless compute for every workload
+Get started for free
+Request a pricing quote
+Overview
+AWS Lambda is a serverless compute service that charges you only for what you use. Lambda Functions are priced per request and execution duration. Lambda MicroVMs are priced per instance-second.
+Functions
+MicroVMs
+Functions
+Lambda Functions Pricing
+Lambda Functions are priced based on the number of requests served and the duration your code runs, measured in GB-seconds. You choose the memory allocated to your function and get proportional CPU and resources. The free tier includes one million requests and 400,000 GB-seconds per month.
+Asynchronous Event (including events from S3, SNS, EventBridge, StepFunctions, Cloudwatch Logs): You are charged for 1 request per each asynchronous Event for first 256 KB. Individual event size beyond 256 KB is charged 1 additional request for each 64 KB of chunk upto 1 MB.
+Duration cost depends on the amount of memory you allocate to your function. You can allocate any amount of memory to your function between 128 MB and 10,240 MB, in 1 MB increments. The table below contains a few examples of the price per 1 ms associated with different memory sizes, for usage falling within the first pricing tier – for example, up to 6 billion GB-seconds / month in US East (Ohio)
+x86 Price
+Arm Price
+x86 Price
+Arm Price
+Lambda on-demand duration pricing tiers are applied to aggregate monthly duration of your functions running on the same architecture (x86 or Arm, respectively), in the same region, within the account. If you’re using consolidated billing in AWS Organizations, pricing tiers are applied to the aggregate monthly duration of your functions running on the same architecture, in the same region, across the accounts in the organization.
+Lambda Managed Instances
+Lambda Managed Instances enables you to run Lambda functions on fully-managed EC2 instances in your VPC, combining Lambda's serverless developer experience with the cost efficiency and hardware flexibility of EC2. This feature is ideal for steady-state, high-volume workloads where you want to optimize costs while maintaining Lambda's operational simplicity.
+With Lambda Managed Instances, you can select from a wide variety of current-generation EC2 instance type to match your workload requirements, benefit from EC2 pricing options including EC2 Instance Savings Plans, Compute Savings Plans and Reserved Instances, and process multiple requests concurrently within the same execution environment to maximize resource utilization. Lambda automatically manages instance provisioning, scaling, patching, and lifecycle management, while you retain the familiar Lambda programming model and seamless integration with event sources like SQS, Kinesis, and Kafka.
+Pricing
+:
+Lambda Managed Instances pricing has three components:
+1.
+Request charges
+: $0.20 per million requests
+2.
+Compute management fee
+: 15% premium on the EC2 on-demand instance price for the instances provisioned and managed by Lambda (Premium for each instance type provided below)
+3.
+EC2 instance charges
+: Standard EC2 instance pricing applies for the instances provisioned in your capacity provider. You can reduce costs by using Compute Savings Plans, Reserved Instances, or other EC2 pricing options
+Note that Lambda Managed Instances functions will not be paying separately for the execution duration of each request unlike Lambda (default) compute type functions.
+Event Source Mappings
+: For workloads using provisioned Event Poller Units (EPUs) with event sources like Kafka or SQS, standard EPU pricing applies.
+Management Fees
+Pricing Example: High-throughput API service
+Suppose you're running a high-traffic API service that processes 100 million requests per month with an average duration of 200ms per request. You configure your Lambda Managed Instance capacity provider to use m7g.xlarge instances (4 vCPU, 16 GB memory, Graviton3) and use a 3-year Compute Savings Plan for maximum cost savings.
+Monthly charges
+Request charges
+Monthly requests: 100M requests
+Request price: $0.20 per million requests
+Monthly request charges: 100M / 1M × $0.20 = $20
+Compute charges
+Instance type: m7g.xlarge
+EC2 on-demand price: $0.1632 per hour (US East N. Virginia)
+With 3-year Compute Savings Plan discount (72%): $0.0457 per hour
+Estimated instance hours needed: ~2,000 hours/month (based on workload pattern and multi-concurrency)
+Monthly EC2 instance charges: 2,000 × $0.0457 = $91.40
+Management fee charges
+Management fee: 15% of EC2 on-demand price
+Management fee per hour: $0.1632 × 0.15 = $0.02448 per hour
+Monthly management fee: 2,000 × $0.02448 = $48.96
+Total monthly charges
+Total charges = Request charges + EC2 instance charges + Management fee charges
+Total charges = $20 + $91.40 + $48.96 = $160.36
+Lambda Durable Functions Pricing
+Lambda durable functions simplify how you build reliable multi-step applications and AI workflows directly within Lambda’s existing programming model, enabling resilient and cost-effective long-running workloads. In durable functions, you use durable operations like “steps” and “waits”, which are checkpoints with optional data stored for extended periods, allowing your function to resume execution after interruptions. When functions resume, the system performs replay, automatically re-executing the event handler from the beginning while skipping completed checkpoints and continuing from the point of interruption. The lifecycle may include multiple sub-invocations (Lambda function invocations that occur when resuming after wait operations, retries, or infrastructure failures) to complete the execution.
+Existing Lambda compute charges apply, including for sub-invocations from replays. When using wait operations, the function suspends execution and, for on-demand functions, does not incur duration charges until execution resumes. In addition, you are charged for durable operations (such as starting executions, completing steps, and creating waits). You also pay for the amount of data written by these operations (in GB) and for data retention during and after execution (in GB-month, prorated). The retention period after completion is configurable from 1 to 90 days (default 14 days).
+For a full list and detailed description of durable operations, see the Lambda
+Developer Guide
+.
+Pricing Example:
+An insurance claim processing system uses Lambda durable functions to analyze claims for fraud detection, coordinate human review for high-value claims, and process approved payments. The process begins with a document analysis step that takes 30 seconds to perform LLM-based fraud detection and risk assessment. The execution then uses a wait to suspend execution for a human review (typically 7 days wait) where an adjuster reviews claims exceeding automatic approval thresholds. Finally, a payment step taking 2 seconds to process the approval decision to initiate the payment. The system processes 1,000,000 insurance claims per month. Each execution uses an 8KB invocation payload and 32KB payloads for claim analysis (step 1), approval decisions (wait), and final payment processing (step 2). The function is configured with 1GB of memory on an ARM-based processor. Completed claim records are retained for 14 days for audit and compliance. Note: Examples are based on price in US East (N. Virginia). All executions start at the beginning of the month and all steps succeed on first attempt without retries to simplify the calculations.
+Note: Examples are based on price in US East (N. Virginia). All executions start at the beginning of the month and all steps succeed on first attempt without retries to simplify the calculations.
+Monthly Compute Charges
+Total compute (seconds)
+1,000,000 × 32s = 32,000,000 seconds
+Total compute (GB-s)
+32,000,000 × 1GB = 32,000,000 GB-s
+Billable compute
+32,000,000 - 400,000 free tier = 31,600,000 GB-s
+Compute cost
+31,600,000 × $0.0000133334 = $421.34
+Monthly Request Charges
+Total requests
+2 invocations (initial + after wait) × 1,000,000 = 2,000,000 requests
+Billable requests
+2,000,000 - 1M free tier = 1,000,000
+Request cost
+1M × $0.20/M = $0.20
+Monthly Durable Functions Charges
+Operations
+1M × (1 start execution + 2 steps + 1 wait) = 4M
+Operations cost
+4M × $8.00/M = $32.00
+Data Written
+1M × (8KB invoke + 3 × 32KB steps/waits) = 104GB
+Data written cost
+104GB × $0.25/GB = $26.00
+Storage (running incl. 7 day wait)
+104GB × (7/30) = 24.27 GB-month
+Storage (retained 14 days)
+104GB × (14/30) = 48.53 GB-month
+Data Retained cost
+(24.27 + 48.53) GB-month × $0.15/GB-month = $10.92
+Total Monthly Charges
+Total charges
+$421.34 + $0.20 + $32.00 + $26.00 + $10.92 = $490.46
+Tenant Isolation Pricing
+Enable tenant isolation mode to isolate request processing for individual end-users or tenants invoking your Lambda function. The underlying execution environments for a tenant-isolated Lambda function are always associated with a particular tenant and are never used to execute requests from other tenants invoking the same function. This capability simplifies developing and maintaining multi-tenant applications that process tenant-specific code or data with strict isolation requirements across tenants. You are charged when Lambda creates a new tenant-isolated execution environment to serve a request, depending on the amount of memory you allocate to your function and the CPU architecture you use. To learn more about Lambda's tenant isolation capability, read the
+documentation
+.
+Pricing Example:
+Multi-tenant SaaS application
+Let’s assume you are building an automation platform that executes user-provided code in response to events. For example, an IT team may want to execute an automated workflow when a new employee joins their organization or transfers across departments. As another example, a DevOps team may want to trigger a CI/CD workflow when a developer commits code changes to their source code repository. Your automation platform is multi-tenant, meaning that it serves multiple end-users. Because you expect high variation in demand, by time of day and for each end-user or tenant, you build your platform using serverless services including AWS Lambda.
+Your automation platform supports the ability to run user-supplied code in response to events. Since you do not control the code provided by users, you enable tenant isolation mode to ensure that Lambda function invocations for each end-user are processed in separate execution environments that are isolated from one another.
+Assume that you have configured your Lambda function with 1024 MB of memory and x86 CPU architecture. During a typical month, your function processes 10M invokes with an average duration of 2 seconds per invoke. Your SaaS platform is used by 1K end-users or tenants. For simplicity, let’s assume that on average each tenant generates 10K invokes per month and Lambda creates 200 execution environments per tenant (i.e. a cold-start rate of 2% per tenant).
+Your charges would be calculated as follows:
+Request charges
+Per month, your function executes 10M times.
+Monthly request charges: 10M * $0.2/M = $2.
+Compute charges
+Per month, your function executes 10M times with an average duration of 2s. Your function's configured memory is 1024 MB.
+Monthly compute duration (seconds): 10M * 2s = 20M seconds
+Monthly compute (GB-s): 20M seconds * 1024 MB / 1024 MB = 20M GB-s
+Monthly compute charges: 20M * $0.0000166667 = $333.34
+Tenant isolation charges
+Per month, on average, your function serves 1K unique tenants. Each tenant invokes the function 10K times with an average of 200 execution environments created per tenant (i.e. average cold-start rate of 2% for each tenant).
+Monthly execution environments created for 1K tenants: 200 * 1K = 200K
+Monthly tenant isolation charges: 200K * $0.000167 * 1024 MB / 1024MB = $33.4
+Total monthly charges
+Total charges = Request charges + Compute charges + Tenant isolation charges
+Total charges = $2 + $333.34 + $33.4 = $368.74
+Lambda Ephemeral Storage Pricing
+Ephemeral storage cost depends on the amount of ephemeral storage you allocate to your function, and function execution duration, measured in milliseconds. You can allocate any additional amount of storage to your function between 512 MB and 10,240 MB, in 1 MB increments. You can configure ephemeral storage for functions running on both x86 and Arm architectures. 512 MB of ephemeral storage is available to each Lambda function at no additional cost. You only pay for the additional ephemeral storage you configure.
+All examples below are based on price in US East (N. Virginia).
+Example 1: Mobile application backend
+Let’s assume you are a mobile app developer building a food ordering app. Customers can use the app to order food from a specific restaurant location, receive order status updates, and pick up the food when the order is ready. Because you expect high variation in demand, both by time of day and restaurant location, you build your mobile backend using serverless services, including AWS Lambda.
+For simplicity, let’s assume your application processes three million requests per month. The average function execution duration is 120 ms. You have configured your function with 1536 MB of memory, on an x86 based processor. Your charges would be calculated as follows:
+Monthly compute charges
+The monthly compute price is $0.0000166667 per GB-s and the free tier provides 400,000 GB-s.
+Total compute (seconds) = 3 million * 120ms = 360,000 seconds
+Total compute (GB-s) = 360,000 * 1536MB/1024 MB = 540,000 GB-s
+Total compute – Free tier compute = monthly billable compute GB- s
+540,000 GB-s – 400,000 free tier GB-s = 140,000 GB-s
+Monthly compute charges =
+140,000 * $0.0000166667 = $2.33
+Monthly request charges
+The monthly request price is $0.20 per one million requests and the free tier provides 1 million requests per month.
+Total requests – Free tier requests = monthly billable requests
+3 million requests – 1 million free tier requests = 2 million monthly billable requests
+Monthly request charges =
+2M * $0.2/M = $0.40
+Total monthly charges
+Total charges = Compute charges + Request charges = $2.33 + $0.40 = $2.73 per month
+Example 2: Enriching streaming telemetry with additional metadata
+Let’s say you are a logistics company with a fleet of vehicles in the field, each of which are enabled with sensors and 4G/5G connectivity to emit telemetry data into an Amazon Kinesis Data Stream. You want to use machine learning (ML) models you’ve developed to infer the health of the vehicle and predict when maintenance for particular components might be required.
+Suppose you have 10,000 vehicles in the field, each of which is emitting telemetry once an hour in a staggered fashion with sufficient jitter. You intend to perform this inference on each payload to ensure vehicles are scheduled promptly for maintenance and ensure optimal health of your vehicle fleet.
+Assume the ML model is packaged along with the function and is 512 MB in size. For inference, you’veconfigured your function with 1 GB of memory, and function execution takes two seconds to complete on average on an x86 based processor.
+Monthly request charges
+:
+Per month, the vehicles will emit 10,000 * 24 * 31 = 7,440,000 messages which will be processed by the Lambda function.
+Monthly request charges →
+7.44M * $0.20/million = $1.488 ~= $1.49
+Monthly compute charges:
+Per month, the functions will be executed once per message for two seconds.
+Monthly compute duration (seconds) → 7.44 million * 2 seconds = 14.88 million seconds
+Monthly compute (GB-s) → 14.88M seconds * 1024 MB/1024 MB = 14.88 GB-s
+Monthly compute charges →
+14.88M GB-s * $0.0000166667 = $248.00
+Total monthly charges:
+Monthly total charges = Request charges + Compute charges =
+$1.49 + $248.00 = $249.49
+Example 3: Performing ML on customer support tickets and interactions to improve customer experience
+Let’s assume you are a financial services company looking to better understand your top customer service issues. Your goal is to improve the customer experience and reduce customer churn. Your customers can chat live with your customer support staff via the mobile app you provide. You decide to deploy a natural language processing (NLP) model.
+In this case, you are using the popular Bidirectional Encoder Representations from Transformers (BERT) model in AWS Lambda. The model helps you parse, analyze, and understand the customer service interactions via the mobile app in order to display relevant support content or route the customer to the appropriate customer service agent. The number of support inquiries your inference model processes varies widely throughout the week.
+Let’s assume your functions running the inference model receive six million requests per month. The average function execution duration is 280 ms. You configure your function with 4096 MB of memory on an x86 based processor.
+You also configure your function to use 2048 MB of ephemeral storage.
+Your charges would be calculated as follows:
+Monthly compute charges:
+The monthly compute price is $0.0000166667 per GB-s and the free tier provides 400,000 GB-s.
+Total compute (seconds) = 6M * 280ms = 1,680,000 seconds
+Total compute (GB-s) = 1,680,000 * 4096 MB/1024 MB = 6,720,000 GB-s
+Total compute – AWS Free Tier compute = Monthly billable compute GB- s
+6,720,000 GB-s – 400,000 free tier GB-s = 6,320,000 GB-s
+Monthly compute charges =
+6,320,000 * $0.0000166667 = $105.33
+Monthly request charges:
+The monthly request price is $0.20 per one million requests and the free tier provides one million requests per month.
+Total requests – Free tier requests = monthly billable requests
+6 million requests – 1 million free tier requests = 5 million monthly billable requests
+Monthly request charges =
+5 million * $0.2/million = $1
+Monthly ephemeral storage charges:
+The monthly ephemeral storage price is $0.0000000309 for every GB-second and Lambda provides 512 MB of storage at no additional cost.
+Total compute (seconds) = 6M * 280ms = 1,680,000 seconds
+Total billable ephemeral storage = 2048 MB – 512 MB = 1536 MB
+Total ephemeral storage (GB-s) = 1,680,000 * 1536 MB/1024 MB = 2,520,000 GB-s
+Monthly ephemeral storage charges =
+2,520,000 * $0.0000000309 = $0.08
+Total monthly charges:
+Total charges = Compute charges + Request charges = $105.33 + $1 + $0.08 =
+$106.41 per month
+Provisioned Concurrency Pricing
+Enable Provisioned Concurrency for your Lambda functions for greater control over your serverless application performance. When enabled, Provisioned Concurrency keeps functions initialized and hyper-ready to respond in double-digit milliseconds. You pay for the amount of concurrency you configure, and for the period of time you configure it. When Provisioned Concurrency is enabled and executed for your function, you also pay for Requests and Duration based on the prices below. If your function exceeds the configured concurrency, you will be billed for excess function execution at the rate outlined in the
+AWS Lambda Pricing
+section above. You can enable Provisioned Concurrency for functions running on both the x86 and Arm architectures. To learn more about Provisioned Concurrency,
+read the documentation.
+Provisioned Concurrency is calculated from the time you enable it on your function until it is disabled, rounded up to the nearest five minutes. The price depends on the amount of memory you allocate to your function and the amount of concurrency that you configure on it. Duration is calculated from the time your code begins executing until it returns or otherwise terminates, rounded up to the nearest 1ms**. The price depends on the amount of memory you allocate to your function.
+** Duration charges apply to code that runs in the handler of a function as well as initialization code that is declared outside of the handler. For Lambda functions with AWS Lambda Extensions, duration also includes the time it takes for code in the last running extension to finish executing during shutdown phase. For functions configured with Provisioned Concurrency, AWS Lambda periodically recycles the execution environments and re-runs your initialization code. For more details, see the
+Lambda Programming Model documentation.
+The Lambda free tier does not apply to functions enabling Provisioned Concurrency. If you enable Provisioned Concurrency for your function and execute it, you will be charged for Requests and Duration based on the price below.
+All examples below are based on price in US East (N. Virginia).
+Example 1: Mobile application launch
+Let’s assume you are a mobile app developer and are building a food ordering mobile application. Customers can use the application to order food from a specific restaurant location, receive order status updates, and pick up the food when the order is ready. Because you expect high variation in your application demand, both by time of day and restaurant location, you build your mobile backend using serverless services, including AWS Lambda.
+For simplicity, let’s assume your application processes three million requests per month. The
+average function execution duration is 120 ms. You have configured your function with 1536 MB of memory on an x86 based processor.
+You are launching the new version of your mobile app, which you have heavily marketed. You expect a spike in demand during launch day, from noon to 8 p.m. You want your mobile app to be responsive even while demand scales up and down quickly, so you enable Provisioned Concurrency on your Lambda functions. You set Provisioned Concurrency to 100.
+During these eight hours, your functions received 500,000 requests. The average function
+execution duration while Provisioned Concurrency is enabled is 100 ms. During the rest of the month, your application receives the additional 2.5 million requests, and your functions execute in response to them without Provisioned Concurrency enabled.
+Your charges would be calculated as follows:
+Provisioned Concurrency charges:
+The Provisioned Concurrency price is $0.0000041667 per GB-s
+Total period of time for which Provisioned Concurrency is enabled (seconds): 8 hours * 3,600 seconds = 28,800 seconds
+Total concurrency configured (GB): 100 * 1536MB/1024MB = 150 GB
+Total Provisioned Concurrency amount (GB-s): 150 GB * 28,800 seconds =4,320,000 GB-s
+Provisioned Concurrency charges:
+4.32M GB-s * $0.0000041667 = $18
+Request charges:
+The monthly request price is $0.20 per 1 million requests and the free tier provides 1M requests per month.
+Total requests – Free tier requests = Monthly billable requests
+3,000,000 requests – 1M free tier requests = 2,000,000 Monthly billable requests
+Monthly request charges =
+2 * $0.20 = $0.40
+Compute charges while Provisioned Concurrency is enabled:
+The compute price is $0.0000097222 per GB-s
+Total compute duration (seconds) = 500,000 * 100ms = 50,000 seconds
+Total compute (GB-s) = 50,000 seconds * 1536 MB / 1024 MB = 75,000 GB-s.
+Total compute charges =
+75,000 GB-s * $0.0000097222 = $0.73
+Compute charges while Provisioned Concurrency is disabled:
+The monthly compute price is $0.0000166667 per GB-s and the free tier provides 400,000 GB-s.
+Total compute (seconds) = 2.5M * 120ms = 300,000 seconds
+Total compute (GB-s) = 300,000 * 1536 MB / 1024 MB = 450,000 GB-s
+Total compute – Free tier compute = Monthly billable compute GB- s
+450,000 GB-s – 400,000 free tier GB-s = 50,000 GB-s
+Monthly compute charges =
+50,000 * $0.0000166667 = $0.83
+Total monthly charges:
+Total charges = Provisioned Concurrency charges + Request charges + Compute charges while Provisioned Concurrency is enabled + Compute charges while Provisioned Concurrency is disabled
+Total charges = $18 + $0.40 + $0.73 + $0.83 = $19.96
+Example 2 : Routing customers to the most relevant support solution content during Cyber Monday
+Let’s assume you are a retailer running a large sale during Cyber Monday, an ecommerce holiday that takes place the Monday after Thanksgiving in the United States. Your customers can chat live with customer support via the mobile app you provide. You decide to deploy a natural language processing (NLP) model.
+In this case, you are using the popular Bidirectional Encoder Representations from Transformers (BERT) model in AWS Lambda. The model helps you parse, analyze, and understand customer service interactions via the mobile app in order to display relevant support content or route the customer to the appropriate customer service agent. You will receive significantly more customer support inquiries during this sale than usual, so you decide to enable Provisioned Concurrency on your Lambda functions so your application responds quickly even while experiencing traffic spikes.
+Let’s assume your functions receive two million requests during the 24 hours of the sale event, while Provisioned Concurrency is enabled. The average function execution duration is 280 ms. You configure your function with 4,096 MB of memory on an x86 based processor, and set Provisioned Concurrency at seven.
+Your charges would be calculated as follows:
+Provisioned Concurrency charges:
+The Provisioned Concurrency price is $0.0000041667 per GB-s.
+Total period of time for which Provisioned Concurrency is enabled (seconds) = 24 hours * 3,600 seconds = 86,400 seconds
+Total concurrency configured (GB): 7 * 4096 MB / 1024 MB = 28 GB
+Total Provisioned Concurrency amount (GB-s) = 28 GB * 86,400 seconds = 2,419,200 GB-s
+Provisioned Concurrency charges =
+2,419,200 GB-s * $0.0000041667 = $10.08
+Compute charges while Provisioned Concurrency is enabled:
+The compute price is $0.0000097222 per GB-s.
+Total compute duration (seconds) = 2,000,000 * 280ms = 560,000 seconds
+Total compute (GB-s) = 560,000 seconds * 4096 MB / 1024 MB = 2,240,000 GB-s.
+Total compute charges =
+2,240,000 GB-s * $0.0000097222 = $21.78
+Monthly request charges:
+The monthly request price is $0.20 per 1 million requests
+Monthly request charges =
+2M * $0.2/M = $0.40
+Total monthly charges:
+Total charges = Provisioned Concurrency charges + Compute charges while Provisioned Concurrency is enabled + Request charges
+= $10.08 + $21.78 + $0.40 = $32.26
+SnapStart Pricing
+SnapStart can improve startup performance from several seconds to as low as sub-second for latency sensitive applications. SnapStart works by snapshotting your function's initialized memory (and disk) state and caching this snapshot for low-latency access. When your function is subsequently invoked, Lambda resumes execution environments from this pre-initialized snapshot instead of initializing them from scratch, improving startup latency.
+A snapshot is created each time you publish a new version of your function with SnapStart enabled. You are charged for caching a snapshot over the period that your function version is active, for a minimum of 3 hours and per millisecond thereafter. The price depends on the amount of memory you allocate to your function. You are also charged each time Lambda resumes an execution environment by restoring your snapshot, with the price depending on the amount of memory you allocate to your function.
+SnapStart pricing does not apply to
+supported Java managed runtimes
+.
+Pricing Example: Enriching streaming telemetry with additional metadata
+Let’s say you are a logistics company with a fleet of vehicles in the field, each of which are enabled with sensors and 4G/5G connectivity to emit telemetry data into an Amazon Kinesis Data Stream. You want to use machine learning (ML) models you’ve developed to infer the health of the vehicle and predict when maintenance for particular components might be required.
+Suppose you have 10,000 vehicles in the field, each of which is emitting telemetry once an hour in a staggered fashion with sufficient jitter. You intend to perform this inference on each payload to ensure vehicles are scheduled promptly for maintenance and ensure optimal health of your vehicle fleet.
+Assume the ML model is packaged along with the function and is 512 MB in size. For inference, you’ve configured your function with 1 GB of memory, and billed execution duration is two seconds on average, on an x86 based processor. You maintain a single version of your function. For simplicity, let’s assume that 1% of all requests result in the creation of new execution environments.
+You notice that end-to-end processing takes several seconds for these 1% of requests. This is driven by your function initialization taking several seconds, because you import large software modules and the ML model during initialization. You want to reduce the end-to-end processing time for these requests, so you enable SnapStart on your function and publish a new version.
+Your charges would be calculated as follows:
+Request charges
+Per month, the vehicles will emit 10,000 * 24 * 31 = 7,440,000 messages which will be processed by the Lambda function.
+Monthly request charges:
+7.44M * $0.20/million = $1.49
+Monthly compute charges
+Per month, your function will be executed once per message for two seconds.
+Monthly compute duration (seconds): 7.44 million * 2 seconds = 14.88 million seconds
+Monthly compute (GB-s): 14.88M seconds * 1024 MB/1024 MB = 14.88M GB-s
+Monthly compute charges:
+14.88M GB-s * $0.0000166667 = $248.00
+SnapStart charges:
+Total time period over which function version is active (seconds): 24 hours * 31 days * 3600 seconds = 2,678,400 seconds
+Allocated function memory: 1024MB/1024MB -> 1 GB
+Total SnapStart Cache used: 1 GB * 2,678,400 s -> 2,678,400 GB-S
+SnapStart Cache charges:
+2.68 million GB-s * $0.0000015046 = $4.03
+Number of requests using SnapStart Restore: 1% of 7.44M = 74,400
+Total SnapStart Restore used: 74,400 * 1 GB = 74,400 GB
+SnapStart Restore charges: 74,400 GB * $0.0001397998 =
+$10.4
+Total SnapStart charges: SnapStart Cache charges + SnapStart Restore charges
+Total SnapStart charges: $4.03 + $10.4 = $14.43
+Total monthly charges
+Total charges = Request charges + Compute charges + SnapStart charges
+Total charges =
+$1.49 + $248.00 + $14.43 = $263.92
+Lambda HTTP Response Stream Pricing
+AWS Lambda functions can return an HTTP response stream when invoked via the InvokeWithResponseStream API or through a function URL using the ResponseStream invoke mode. HTTP response streaming can improve Time to First Byte performance and supports payloads larger than 6 MB. When using HTTP response streaming, you are charged for each GB written to the response stream by your function. You can stream the first 6 MB per request at no cost.
+All examples below are based on price in US East (N. Virginia).
+Pricing Example: Streaming Server Side Rendered Web Content
+Let’s assume you are a web application developer and are building a website that is server side rendered in a Lambda function. Your Lambda function dynamically generates HTML content based on the request and the results of multiple downstream service calls. Some of these calls can take a long time to return a response. To optimize your users’ page loading experience, you use Lambda’s HTTP response streaming capabilities to improve Time to First Byte performance by rendering the first chunks of HTML in the browser as soon as your function generates them.
+For simplicity, let’s assume your application processes three million requests per month. Let’s also assume you have exhausted the 100 GB of response streaming included in the AWS free tier. The average function duration is 500ms. You have configured your function with 1536 MB of memory on an x86 based processor. The average payload size per request is 100 KB for the first two million requests per month, and 7 MB for the last million requests per month. The example calculation assumes 1 GB = 1,024 MB.
+Your charges would be calculated as follows:
+Monthly compute charges
+The monthly compute price is $0.0000166667 per GB-s and the free tier provides 400,000 GB-s.
+Total compute (seconds) = 3 million * 500ms = 1,500,000 seconds
+Total compute (GB-s) = 1,500,000 * 1536MB/1024 MB = 2,250,000 GB-s
+Total compute – Free tier compute = monthly billable compute GB-s
+2,250,000 GB-s – 400,000 free tier GB-s = 1,850,000 GB-s
+Monthly compute charges =
+1,850,000 * $0.0000166667 = $30.83
+Monthly request charges
+The monthly request price is $0.20 per one million requests and the free tier provides 1 million request per month.
+Total requests – Free tier requests = monthly billable requests
+3 million requests – 1 million free tier requests = 2 million monthly billable requests
+Monthly request charges =
+2M * $0.2/M = $0.40
+Processed bytes charges
+The monthly bytes streamed price is $0.008 per GB streamed and the free tier provides 100 GB per month. The first 6 MB streamed per request are also free.
+Free bytes streamed (GB) = 2 million requests * 100 KB = 190.7 GB
+Since 100 KB < 6 MB per request, the 190.7 GB streamed are free.
+Chargeable bytes streamed (GB) = 1 million requests * (7 MB – 6 MB) = 976.56 GB
+Monthly bytes streamed charges =
+976.56 GB * $0.008 = $7.81
+Total monthly charges:
+Total charges = Compute charges + Request charges + Bytes Streamed charges = $30.83 + $0.40 + $7.81 =
+$39.04 per month
+Provisioned Mode for Event Source Mapping (ESM) Pricing
+Provisioned Mode for ESM allows you to optimize the throughput of your ESM by allocating a minimum and maximum number of resources called event pollers, and autoscaling between configured minimum and maximum limits. An event poller is the configurable resource that underpins an ESM in Provisioned Mode. Pricing is based on the provisioned minimum event pollers, and the event pollers consumed during autoscaling. Charges are calculated using a billing unit called Event Poller Unit (EPU). You pay for the number and duration of EPUs used, measured in Event-Poller-Unit-hours.
+SQS ESM: An EPU supports one event poller, each providing up to 1 MB/s throughput. Each SQS ESM requires a minimum of 2 event pollers.
+MSK or Self-managed Kafka (SMK) ESM: Each EPU supports up to 20 MB/s throughput capacity for event polling, with a default of 10 event pollers. Each event poller can scale up to 5 MB/s throughput. The number of event pollers allocated on an EPU depends on the compute capacity consumed by each event poller. You can group multiple ESMs within the same Amazon VPC to share EPU capacity and costs. To learn about Provisioned mode for Kafka ESM, read the
+documentation
+.
+Data Transfer:
+You are billed at standard
+AWS data transfer rates
+.
+Duration:
+Pricing is calculated per second, with a 1-minute minimum.
+Pricing Example 1:
+Example: Real-time streaming data analysis using Kafka
+Suppose you are a global customer contact center solution provider and have pipelines that emit metadata related to call experience to Amazon MSK (Kafka) topics for real-time analysis. Since the traffic can be spiky and unpredictable, you want to use the Provisioned Mode for ESM to fine-tune the performance of your ESM. Suppose your Lambda function that processes these messages is configured with 1,024MB memory for x86 processor, and experiences 1M invocations per day with 2 seconds average duration. Assume that you activated Provisioned Mode for your ESM with the default 1 event poller, and your ESM scales up to consume 800 EPU-hours per month in US East (N. Virginia).
+Monthly compute charges
+The monthly compute price is $0.0000166667 per GB-s and the free tier provides 400,000 GB-s
+Total compute (seconds) = 1,000,000 * 30 * 2 seconds = 60,000,000 seconds
+Total compute (GB-s) = 60,000,000 * 1024MB/1024 = 60,000,000 GB-s
+Total compute – Free tier compute = monthly billable compute GB-s
+60,000,000 GB-s – 400,000 free tier GB-s = 59,600,000 GB-s
+Monthly compute charges = 59,600,000 * $0.0000166667 = $993.3
+Monthly request charges
+The monthly request price is $0.20 per 1 million requests.
+Monthly request charges = 60M requests * $0.20 = $12.00
+Monthly Provisioned Mode for ESM charges
+EPU charges = 800 EPU-hours * $0.185 = $148
+Monthly Provisioned Mode for ESM charges = $148
+Total charges
+Total charges = Compute charges + Request charges + Provisioned Mode for ESM charges
+Total charges = $993.3 + $12 + $148 = $1,153.3
+Pricing Example 2
+Real-time event processing using Amazon SQS
+Example: Real-time event processing using Amazon SQS
+Suppose you are a financial services firm processing market data feeds and executing financial transactions using event-driven micro-services for real-time customer facing financial application. Since the traffic can be spiky and unpredictable, you want to use the Provisioned Mode for SQS ESM to fine-tune the performance of your ESM. Suppose your Lambda function that processes these events is configured with 1,024MB memory for x86 processor, and experiences 1M invocations per day with 1 seconds average duration. You have maximum event TPS of 100 which you want to process with maximum latency of 0.2 second. To achieve this latency performance, you have activated Provisioned mode for your SQS ESM with 10 minimum event pollers, and your ESM scales up to consume 8000 EPU-hours per month in US EAST (N. Virginia) region to handle your spiky low latency traffic.
+Monthly compute charges
+The monthly compute price is $0.0000166667 per GB-s
+Total compute (seconds) = 1,000,000 * 30 * 1 seconds = 30,000,000 seconds
+Total compute (GB-s) = 30,000,000 * 1024MB/1024 = 30,000,000 GB-s
+Total compute = monthly billable compute GB-s * $0.0000166667
+Monthly compute charges = 30,000,000 * $0.0000166667 = $500
+Monthly request charges
+The monthly request price is $0.20 per 1 million requests
+Monthly request charges = 30M requests * $0.20 = $6
+Monthly Provisioned Mode for SQS ESM charges
+The EPU price is $0.00925 per EPU-hour
+EPU charges = 8000 EPU-hours * $0.00925 = $74
+Monthly Provisioned Mode for ESM charges = $74
+Total charges
+Total charges = Compute charges + Request charges + Provisioned Mode for ESM charges
+Total charges = $500 + $6 + $74 = $580
+Pricing Example 3
+Example: Real-time streaming data analysis using multiple Kafka ESMs
+Suppose you are a global customer contact center solution provider and have pipelines that emit metadata related to call experience to tens of Amazon MSK (Kafka) topics, each ingesting messages from your various products. Each topic is ingesting with maximum 500 messages per second, with average message size of 3 KB, and peak throughput of 1.5 MB/s. Since the traffic can be spiky and unpredictable, you want to use the Provisioned Mode for ESM to fine-tune the performance of your ESM. Suppose your Lambda function that processes these messages is configured with 1,024MB memory for x86 processor, and experiences 1M invocations per day with 0.2 seconds average duration. You created 10 Kafka ESMs for event processing with <1.5 MB/s of throughput per ESM, which you decided to group them under the same Poller group to optimize the costs. Assume that you activated Provisioned Mode for your ESM with the default 1 event poller, and you are using all your 10 ESMs within the same poller group in US East (N. Virginia).
+Monthly compute charges
+The monthly compute price is $0.0000166667 per GB-s and the free tier provides 400,000 GB-s
+Total compute (seconds) = 1,000,000 * 30 * 0.2 seconds = 6,000,000 seconds
+Total compute (GB-s) = 6,000,000 * 1024MB/1024 = 6,000,000 GB-s
+Total compute (GB-s) for all 10 ESMs = 6,000,000 GB-s * 10 = 60,000,000 GB-s
+Monthly compute charges = 60,000,000 * $0.0000166667 = $1,000
+Monthly request charges
+The monthly request price is $0.20 per 1 million requests.
+Total monthly requests for all 100 ESMs = 1 million * 30 days * 10 ESMs = 300M requests
+Monthly request charges = 300M requests * $0.20 = $60.00
+Monthly Provisioned Mode for ESM charges
+EPU-hours price is $0.185/hour and supports 10 event pollers per EPU.
+Total events pollers per hour = 1 event poller * 10 ESMs = 10 event pollers
+EPU used = 10 event pollers used / 10 event pollers supported per EPU = 1 EPU
+Total EPUs per month = 1 EPU * 720 hours per month = 720 EPU-hours
+EPU charges = 720 EPU-hours * $0.185 = $133.2
+Monthly Provisioned Mode for ESM charges = $133.2
+Total charges
+Total charges = Compute charges + Request charges + Provisioned Mode for ESM charges
+Total charges = $1,000 + $60 + $133.2 = $1,193.2 per month for 10 ESMs
+Monthly costs per ESM = $1,193.2 / 10 = $119.3 per month per ESM
+Data Transfer & Other Charges
+Data Transfer
+Data transferred “in” to and “out” of your AWS Lambda functions
+, from outside the region the function executed, will be charged at the Amazon EC2 data transfer rates as listed under "
+Data transfer
+".
+Data transfer with AWS Lambda Functions is free in the same AWS Region between the following services: Amazon Simple Storage Service (S3), Amazon Glacier, Amazon DynamoDB, Amazon Simple Email Service (SES), Amazon Simple Queue Service (SQS), Amazon Kinesis, Amazon Elastic Container Registry (ECR), Amazon Simple Notification Service (SNS), Amazon Elastic File System (EFS), and Amazon SimpleDB.
+The usage of
+Amazon Virtual Private Cloud (VPC) or VPC peering, with AWS Lambda functions will incur additional charges as explained
+on the Amazon Elastic Compute Cloud (EC2) on-demand pricing page
+. A VPC peering connection is a networking
+connection between two VPCs that enables you to route traffic between them using private IPv4 addresses or IPv6 addresses
+.
+Additional Charges
+You may incur additional charges if your Lambda function utilizes other AWS services or transfers data. For example,
+if your Lambda function reads and writes data to or from Amazon S3, you will be billed for the read/write requests and the data stored in Amazon S3
+.
+For details on AWS service pricing, see the pricing section of the relevant AWS service detail pages.
+Lambda@Edge Pricing
+Lambda@Edge functions are metered at a granularity of 1ms
+Pricing Example:
+If your Lambda@Edge function executed 10 million times in one month, and it ran for 10ms each time, your charges would be calculated as follows:
+Monthly compute charges
+The monthly compute price is $0.00000625125 per 128MB-second
+Total compute (seconds) = 10M * (0.01sec) = 100,000 seconds
+Monthly compute charges = 100,000 * $0.00000625125 = $0.63
+Monthly request charges
+The monthly request price is $0.60 per 1 million requests..
+Monthly request charges = 10M * $0.6/M = $6.00
+Total monthly charges
+Total charges = Compute charges + Request charges = $0.63 + $6.00 = $6.63 per month
+MicroVMs
+Lambda MicroVMs Pricing
+AWS Lambda MicroVMs pricing is based on the compute resources you use, snapshot read/write operations and storage, and data transfer at standard AWS rates.
+Compute
+Lambda MicroVMs eliminate the need to right-size each compute environment for peak activity. You configure a baseline by setting memory, and CPU is allocated in a 2:1 memory-to-CPU ratio – the default is 2GB / 1vCPU. During peak activity, your MicroVM can vertically scale up to 4x the baseline (up to 8GB / 4vCPU), with no action required on your part.
+You pay for baseline compute resources while your MicroVM is running. When your workload consumes resources above the baseline, you are charged only for the active duration of the additional memory and vCPU consumed – not for the peak capacity. This means you can configure for your typical workload and let Lambda handle the spikes. Compute usage is billed per second. For details on sizing your MicroVMs, see
+creating a MicroVM image
+.​​​​​​​
+Graviton (ARM)
+Snapshots
+Lambda MicroVMs uses snapshots to deliver near-instant startup and reduce idle costs. A MicroVM image is a snapshot of your application's pre-initialized state. Instead of cold-starting from scratch, your MicroVM launches from this image. During idle periods, you can suspend a running MicroVM for up to 8 hours, preserving its memory and disk state without paying compute charges. When traffic returns, the suspended MicroVM resumes rapidly, either automatically or programmatically. You are charged for snapshot storage, snapshot data read (on start or resume), and snapshot data written (on suspend).
+* MicroVM Image storage has a 1-week minimum retention period.
+Data Transfer
+You are charged for data transfer at standard
+AWS Data Transfer rates
+. You are also charged for data transferred between your Lambda MicroVMs and your Amazon VPC, as outlined in
+Data Transfer within the same AWS Region
+.
+​​Lambda MicroVMs - Pricing Examples​
+​​​All examples below are based on pricing in US East (N. Virginia), using ARM (Graviton) architecture. For each GB of memory configured, Lambda MicroVMs allocates vCPU in a 2:1 ratio (e.g., configuring 8 GB memory allocates 4 vCPU).​​
+​​Pricing Example 1: Sandboxed environments for coding assistants​
+​​​​​​Let's assume you are building a platform that provides each developer with an isolated, sandboxed Linux environment for AI-assisted coding. Each environment runs in a Lambda MicroVM configured with a 2 GB memory and 1 vCPU baseline that can vertically scale to 8 GB memory and 4 vCPU for resource-intensive tasks like compilation and test execution. Your organization maintains 5 standard MicroVM images (Rust, Python, Node.js, Java, Go), each 2 GB in size. Every developer launches one environment per day from a 2 GB image.​​​​​ ​​​​​​Over an 8-hour workday, each environment is used for 2.5 hours: using baseline resources provisioned for 75% of this period (2 GB & 1 vCPU) and vertically scaling to peak resources for 25% of this period (8 GB & 4 vCPU). ​ ​During the remaining 5.5 idle hours of the workday (when developers step away or context-switch to other tasks) the environment automatically suspends, preserving 2 GB of state i.e. working directory, process state, and file caches. Each environment experiences 6 suspend/resume cycles per day as developers context switch between coding and their other activities. With suspend/resume, you avoid paying for always-on compute during idle periods while preserving your complete working state. Developers pick up exactly where they left off without restarting their environment or re-initializing state. ​ ​Your team has 100 developers, each using the development platform for 20 days per month. Your monthly charges would be calculated as follows:​​​​​
+Monthly compute charges
+To recap, 75% of compute time is spent at baseline resource consumption and 25% at peak resource consumption.​
+​​Peak usage seconds: 100 developers × 20 days × 2.5 hours × 25% = 4.5M seconds​
+​​Charges for peak usage:
+vCPU: 4.5M seconds × 4 vCPU × $0.0000276944/vCPU-second = $498.50
+Memory: 4.5M seconds × 8 GB memory × $0.0000036667/GB-second = $132.00
+Total: $630.50​
+​​Baseline usage seconds: 100 developers × 20 days × 2.5 hrs × 75% = 13.5M seconds​
+​​Charges for baseline usage:
+vCPU: 13.5M seconds × 1 vCPU × $0.0000276944/vCPU-second = $373.87
+Memory: 13.5M seconds × 2 GB memory × $0.0000036667/GB-second = $99.00
+Total: $472.88​
+​​Monthly compute charges: $630.50 + $472.88 =
+$1,103.38​
+Monthly snapshot charges
+​​Snapshot read/write:
+Monthly suspend/resume cycles: 100 developers × 20 days × 6 cycles = 12,000 cycles​
+​​Snapshot write (suspend) charges: 12,000 cycles × 2 GB × $0.0038/GB = $91.20​
+​​Snapshot read (resume) charges: 12,000 cycles × 2 GB × $0.00155/GB = $37.20​
+Monthly launches: 100 developers × 1 launch per day × 20 days = 2,000 launches
+Snapshot read (launch) charges: 2,000 launches × 2 GB × $0.00155/GB = $6.20
+Total monthly snapshot read/write charges: $91.20 + $37.20 + $6.20 =
+$134.60
+​​Snapshot storage:​
+MicroVM image storage charges: 5 images × 2 GB × $0.08/GB-month = $0.80
+Suspended MicroVM charges: 100 developers × 2 GB × (5.5 idle-hrs/day × 20 days / 720 hrs) × $0.08/GB-month = $2.44
+Monthly snapshot storage charges:
+$3.24
+Total monthly charges
+​​Total charges = Compute charges + Snapshot read/write charges + Snapshot storage charges = $1,103.38 + $134.60 + $3.24 =
+$1,241.22​
+​​Monthly cost per developer: $1,241.22 / 100 =
+$12.41​
+​Pricing Example 2: Ephemeral isolated environments for security scans and CI/CD jobs​
+Let's assume you are building a platform that runs security scans or CI/CD jobs on behalf of multiple end-users. Each job executes untrusted or semi-trusted code - dependency installation, build scripts, vulnerability scanners. For this reason, each job requires its own hardware-isolated environment. Traffic is unpredictable, so you previously maintained a large pool of idle environments on standby to meet latency requirements. With Lambda MicroVMs, environments launch fast from snapshots, so you no longer need an idle pool. Each environment is configured with an 8 GB memory & 4 vCPU baseline that can vertically scale to 32 GB & 16 vCPU for resource-intensive compilation or scanning phases. Jobs run to completion in a single shot; no suspend/resume is needed. Each job runs for an average of 10 minutes, with 10% of that time at peak (32 GB & 16 vCPU) and 90% at baseline (8 GB & 4 vCPU). You maintain a single standard MicroVM image (2 GB). With snapshot-based startup, you no longer pay for idle standby pools - each environment launches rapidly on demand and terminates when the job completes. Your platform runs 10,000 jobs per month. Your charges would be calculated as follows:
+Monthly compute charges
+​​To recap, 90% of compute time is spent at baseline resource consumption and 10% at peak resource consumption.​
+​Peak usage seconds: 10,000 jobs × 600s × 10% = 600K seconds​​
+​​Charges for peak usage:
+vCPU: 600K seconds × 16 vCPU × $0.0000276944/vCPU-second = $265.87
+Memory: 600K seconds × 32 GB memory × $0.0000036667/GB-second = $70.40
+Total: $336.27
+​​Baseline usage seconds: 10,000 jobs × 600s × 90% = 5.4M seconds​
+​​Charges for baseline usage:
+vCPU: 5.4M seconds × 4 vCPU × $0.0000276944/vCPU-second = $598.20
+Memory: 5.4M seconds × 8 GB memory × $0.0000036667/GB-second = $158.40
+Total: $756.60​
+​​Monthly compute charges: $336.27 + $756.60 =
+$1,092.87​
+Monthly snapshot charges
+​​Snapshot read/write: ​
+Monthly launches: 10,000 jobs × 1 launch each = 10,000 launches
+Snapshot read (launch) charges: 10,000 launches × 2 GB × $0.00155/GB = $31​
+Total monthly snapshot read/write charges:
+$31
+​
+​​Snapshot storage:​
+MicroVM image storage charges: 1 image × 2 GB × $0.08/GB-month = $0.16​
+Monthly snapshot storage charges:
+$0.16
+Total monthly charges
+​​​​​Total charges = Compute charges + Snapshot read/write charges + Snapshot storage charges = $1,092.87 + $31 + $0.16 =
+$1,124.03​​
+Cost per job: $1,124.03 / 10,000 =
+$0.112​
+Additional pricing resources
+AWS Pricing Calculator
+Easily calculate your monthly costs with AWS
+Get Pricing Assistance
+Contact AWS specialists to get a personalized quote
+Get started with AWS Lambda
+Feature
+Find out how AWS Lambda works
+Explore AWS Lambda Features
+Documentation
+Explore hands-on training
+Check out getting started tutorials
+Getting started
+Connect with an expert
+Explore support options
