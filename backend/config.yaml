@@ -1,0 +1,47 @@
+# Single source of truth for RAG pipeline tuning parameters. Deliberately separate from
+# environment variables: env vars are secrets/deployment-specific (Qdrant creds, endpoint
+# name, set per-environment); this file is pipeline behavior that should be reviewable and
+# diffable in version control. Prompt wording/versioning stays in prompts.py on purpose --
+# that's a different kind of change (content, not a tunable knob) with its own PROMPT_VERSION.
+
+embeddings:
+  dense_model: sentence-transformers/all-MiniLM-L6-v2
+  sparse_model: Qdrant/bm25
+
+reranker:
+  enabled: true
+  model: cross-encoder/ms-marco-MiniLM-L-6-v2
+
+chunking:
+  chunk_size: 512
+  chunk_overlap: 100
+
+retrieval:
+  hybrid_prefetch_limit: 20 # candidates pulled from each of dense/sparse before RRF fusion
+  rerank_candidate_limit: 10 # candidates kept after fusion, handed to the cross-encoder
+  final_top_k: 4 # final chunks passed into the generation prompt after reranking
+
+relevance_gate:
+  reject_threshold: 0.15 # dense cosine similarity below this -> out_of_scope, no LLM call
+  confident_threshold: 0.35 # at/above this -> grounded prompt; between -> weak-context prompt
+
+guardrails:
+  max_query_length: 500
+  min_groundedness_ratio: 0.15
+
+generation:
+  sagemaker_model_id: huggingface-text2text-flan-t5-base
+  max_length: 256
+  num_beams: 2
+
+qdrant:
+  default_collection_name: aws_lambda_docs
+
+self_correction:
+  max_regenerations: 1 # server-side cap on auto-regeneration retries per original answer
+
+idempotency:
+  ttl_seconds: 3600 # how long a cached response for a request_id is replayed instead of re-run
+
+ingestion:
+  upsert_batch_size: 20 # chunks per Qdrant upsert call; also the granularity of progress updates
