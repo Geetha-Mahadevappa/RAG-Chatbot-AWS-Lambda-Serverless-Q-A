@@ -1,0 +1,13 @@
+# Local dev / ingestion / test deps. Lambda has its own pinned set in backend/requirements.txt
+# (CPU-only torch there to keep the container image small). No .env / dotenv anywhere --
+# config comes from real environment variables (see README).
+
+sentence-transformers>=3.0.0
+fastembed>=0.4.0
+qdrant-client>=1.12.0
+langchain-aws>=0.2.0
+boto3>=1.35.0
+sagemaker>=2.230.0,<3.0.0
+pypdf>=4.0.0
+pyyaml>=6.0
+pydantic>=2.0
