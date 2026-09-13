@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>RAG Chatbot — AWS Lambda &amp; Serverless Q&amp;A</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #0f1115;
+    --panel: #171a21;
+    --border: #2a2e37;
+    --text: #e6e8eb;
+    --muted: #9aa0ab;
+    --accent: #4f8cff;
+    --user-bubble: #2a3350;
+    --bot-bubble: #1d2129;
+    --error-bg: #3a1518;
+    --error-border: #8a2530;
+    --error-text: #ff9aa2;
+    --warn-bg: #3a2e12;
+    --warn-border: #8a6a20;
+    --warn-text: #ffcf7a;
+    --info-bg: #12242e;
+    --info-border: #235066;
+    --info-text: #7fc4e8;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f5f6f8; --panel: #ffffff; --border: #e0e2e8; --text: #16181d; --muted: #666d78;
+      --user-bubble: #dbe6ff; --bot-bubble: #eef0f3;
+      --error-bg: #ffecee; --error-border: #f3aab0; --error-text: #a30f1f;
+      --warn-bg: #fff6e0; --warn-border: #f0cf80; --warn-text: #8a5a00;
+      --info-bg: #eaf6fc; --info-border: #a9d8ec; --info-text: #1a5c78;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    display: flex; justify-content: center;
+  }
+  .app { width: 100%; max-width: 760px; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 16px; }
+  h1 { font-size: 1.25rem; margin: 8px 0 0; }
+  .subtitle { color: var(--muted); font-size: 0.9rem; margin: 0 0 8px; }
+  .config {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .config-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .config-row label { font-size: 0.85rem; color: var(--muted); white-space: nowrap; min-width: 190px; }
+  .config-row input[type=text] {
+    flex: 1; min-width: 200px; background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px 8px; color: var(--text); font-size: 0.85rem;
+  }
+  .config .status { font-size: 0.78rem; color: var(--muted); }
+  .panel {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px; display: flex; flex-direction: column; gap: 10px; max-width: 360px;
+  }
+  .panel input {
+    padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--text); font-size: 0.95rem;
+  }
+  .panel .status { font-size: 0.82rem; color: var(--muted); min-height: 1.1em; }
+  .panel .status.error { color: var(--error-text); }
+  .topbar { display: flex; justify-content: space-between; align-items: center; }
+  .topbar .whoami { font-size: 0.85rem; color: var(--muted); }
+  button.link {
+    background: none; border: none; color: var(--muted); text-decoration: underline;
+    cursor: pointer; font-size: 0.82rem; padding: 0;
+  }
+  #log {
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px; min-height: 320px; max-height: 55vh; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .msg { max-width: 85%; padding: 10px 13px; border-radius: 12px; line-height: 1.45; font-size: 0.95rem; white-space: pre-wrap; }
+  .msg.user { align-self: flex-end; background: var(--user-bubble); border-bottom-right-radius: 3px; }
+  .msg.bot { align-self: flex-start; background: var(--bot-bubble); border-bottom-left-radius: 3px; }
+  .msg.error {
+    align-self: flex-start; background: var(--error-bg); border: 1px solid var(--error-border);
+    color: var(--error-text); border-bottom-left-radius: 3px;
+  }
+  .msg.info {
+    align-self: flex-start; background: var(--info-bg); border: 1px solid var(--info-border);
+    color: var(--info-text); border-bottom-left-radius: 3px;
+  }
+  .msg .code { font-family: ui-monospace, monospace; font-size: 0.75rem; opacity: 0.85; display: block; margin-bottom: 4px; }
+  .warning {
+    margin-top: 8px; padding: 6px 10px; border-radius: 8px; font-size: 0.8rem;
+    background: var(--warn-bg); border: 1px solid var(--warn-border); color: var(--warn-text);
+  }
+  details.sources { margin-top: 8px; font-size: 0.78rem; color: var(--muted); }
+  details.sources summary { cursor: pointer; }
+  details.sources .src { margin: 6px 0 0 12px; padding-left: 8px; border-left: 2px solid var(--border); }
+  .feedback { margin-top: 10px; display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted); }
+  .feedback button {
+    padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); background: transparent;
+    color: var(--text); font-size: 0.8rem; cursor: pointer;
+  }
+  .feedback button:hover { border-color: var(--accent); }
+  .feedback button:disabled { opacity: 0.4; cursor: default; }
+  .feedback .ack { font-size: 0.78rem; color: var(--muted); }
+  form { display: flex; gap: 8px; }
+  #query {
+    flex: 1; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border);
+    background: var(--panel); color: var(--text); font-size: 0.95rem;
+  }
+  button.primary {
+    padding: 12px 18px; border-radius: 10px; border: none; background: var(--accent);
+    color: white; font-size: 0.95rem; cursor: pointer;
+  }
+  button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .hint { font-size: 0.78rem; color: var(--muted); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div>
+    <h1>AWS Lambda &amp; Serverless Q&amp;A</h1>
+    <p class="subtitle">RAG chatbot: Qdrant hybrid search + rerank + SageMaker JumpStart, behind a private, login-only Lambda.</p>
+  </div>
+
+  <div class="config">
+    <div class="config-row">
+      <label for="functionUrl">Backend (Lambda Function URL):</label>
+      <input type="text" id="functionUrl" placeholder="https://xxxx.lambda-url.eu-central-1.on.aws/" />
+    </div>
+    <div class="config-row">
+      <label for="userPoolId">Cognito User Pool ID:</label>
+      <input type="text" id="userPoolId" placeholder="eu-central-1_xxxxxxxxx" />
+    </div>
+    <div class="config-row">
+      <label for="clientId">Cognito App Client ID:</label>
+      <input type="text" id="clientId" placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxx" />
+    </div>
+    <div class="config-row">
+      <label for="identityPoolId">Cognito Identity Pool ID:</label>
+      <input type="text" id="identityPoolId" placeholder="eu-central-1:xxxxxxxx-xxxx-..." />
+    </div>
+  </div>
+
+  <div id="loginPanel" class="panel">
+    <form id="loginForm">
+      <input type="text" id="username" placeholder="Username" autocomplete="username" />
+      <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
+      <button class="primary" type="submit">Sign in</button>
+    </form>
+    <div id="newPasswordSection" hidden>
+      <p class="status">First login: choose a permanent password.</p>
+      <input type="password" id="newPassword" placeholder="New password" />
+      <button class="primary" id="submitNewPassword" type="button">Set password</button>
+    </div>
+    <p id="loginStatus" class="status"></p>
+    <p class="hint">No public sign-up — accounts are created by the project owner via <code>aws cognito-idp admin-create-user</code> (see README).</p>
+  </div>
+
+  <div id="chatPanel" hidden>
+    <div class="topbar">
+      <span class="whoami" id="whoami"></span>
+      <button class="link" id="signOutBtn" type="button">Sign out</button>
+    </div>
+    <div id="log"></div>
+    <form id="form">
+      <input type="text" id="query" placeholder="Ask about AWS Lambda…" autocomplete="off" />
+      <button class="primary" id="submit" type="submit">Ask</button>
+    </form>
+    <p class="hint">Try an off-topic question or "ignore previous instructions…" to see the guardrail respond. This backend requires a signed-in session — no anonymous access.</p>
+  </div>
+</div>
+
+<script type="module">
+  import { AwsClient } from 'https://esm.sh/aws4fetch@1.0.20';
+
+  const REGION = 'eu-central-1'; // matches this project's AWS_REGION everywhere else
+
+  const functionUrlEl = document.getElementById('functionUrl');
+  const userPoolIdEl = document.getElementById('userPoolId');
+  const clientIdEl = document.getElementById('clientId');
+  const identityPoolIdEl = document.getElementById('identityPoolId');
+
+  const CONFIG_KEYS = {
+    functionUrl: 'rag_chatbot_function_url',
+    userPoolId: 'rag_chatbot_user_pool_id',
+    clientId: 'rag_chatbot_client_id',
+    identityPoolId: 'rag_chatbot_identity_pool_id',
+  };
+  const configEls = { functionUrl: functionUrlEl, userPoolId: userPoolIdEl, clientId: clientIdEl, identityPoolId: identityPoolIdEl };
+  for (const [key, el] of Object.entries(configEls)) {
+    el.value = localStorage.getItem(CONFIG_KEYS[key]) || '';
+    el.addEventListener('change', () => localStorage.setItem(CONFIG_KEYS[key], el.value.trim()));
+  }
+
+  const loginPanel = document.getElementById('loginPanel');
+  const chatPanel = document.getElementById('chatPanel');
+  const loginForm = document.getElementById('loginForm');
+  const usernameEl = document.getElementById('username');
+  const passwordEl = document.getElementById('password');
+  const loginStatusEl = document.getElementById('loginStatus');
+  const newPasswordSection = document.getElementById('newPasswordSection');
+  const newPasswordEl = document.getElementById('newPassword');
+  const submitNewPasswordBtn = document.getElementById('submitNewPassword');
+  const whoamiEl = document.getElementById('whoami');
+  const signOutBtn = document.getElementById('signOutBtn');
+
+  const logEl = document.getElementById('log');
+  const formEl = document.getElementById('form');
+  const queryEl = document.getElementById('query');
+  const submitEl = document.getElementById('submit');
+
+  // --- Cognito User Pool login (real accounts, no anonymous access) ---
+  // InitiateAuth/RespondToAuthChallenge are plain unauthenticated REST calls -- Cognito
+  // authorizes them via the app client config, not IAM/SigV4 -- so no signing needed here.
+  const IDP_TOKENS_KEY = 'rag_chatbot_idp_tokens'; // { idToken, refreshToken, idTokenExpiresAt, username }
+  let session = null;
+  let cachedAwsCredentials = null;
+  let pendingChallenge = null; // { session, username } while NEW_PASSWORD_REQUIRED is active
+
+  function idpEndpoint() {
+    return `https://cognito-idp.${REGION}.amazonaws.com/`;
+  }
+
+  async function idpCall(target, body) {
+    const resp = await fetch(idpEndpoint(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': `AWSCognitoIdentityProviderService.${target}` },
+      body: JSON.stringify(body),
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.message || `${target} failed (${resp.status})`);
+    return data;
+  }
+
+  function saveSession(username, authResult) {
+    session = {
+      username,
+      idToken: authResult.IdToken,
+      refreshToken: authResult.RefreshToken || session?.refreshToken,
+      idTokenExpiresAt: Date.now() / 1000 + authResult.ExpiresIn,
+    };
+    localStorage.setItem(IDP_TOKENS_KEY, JSON.stringify(session));
+  }
+
+  function loadSession() {
+    try {
+      const raw = localStorage.getItem(IDP_TOKENS_KEY);
+      session = raw ? JSON.parse(raw) : null;
+    } catch {
+      session = null;
+    }
+  }
+
+  function clearSession() {
+    session = null;
+    cachedAwsCredentials = null;
+    localStorage.removeItem(IDP_TOKENS_KEY);
+  }
+
+  async function signIn(username, password) {
+    const clientId = clientIdEl.value.trim();
+    if (!clientId) throw new Error('Set the Cognito App Client ID above first.');
+
+    const data = await idpCall('InitiateAuth', {
+      AuthFlow: 'USER_PASSWORD_AUTH',
+      ClientId: clientId,
+      AuthParameters: { USERNAME: username, PASSWORD: password },
+    });
+
+    if (data.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
+      pendingChallenge = { session: data.Session, username };
+      return { challenge: 'NEW_PASSWORD_REQUIRED' };
+    }
+    saveSession(username, data.AuthenticationResult);
+    return { challenge: null };
+  }
+
+  async function completeNewPasswordChallenge(newPassword) {
+    const clientId = clientIdEl.value.trim();
+    const data = await idpCall('RespondToAuthChallenge', {
+      ChallengeName: 'NEW_PASSWORD_REQUIRED',
+      ClientId: clientId,
+      ChallengeResponses: { USERNAME: pendingChallenge.username, NEW_PASSWORD: newPassword },
+      Session: pendingChallenge.session,
+    });
+    saveSession(pendingChallenge.username, data.AuthenticationResult);
+    pendingChallenge = null;
+  }
+
+  async function refreshIdToken() {
+    const clientId = clientIdEl.value.trim();
+    const data = await idpCall('InitiateAuth', {
+      AuthFlow: 'REFRESH_TOKEN_AUTH',
+      ClientId: clientId,
+      AuthParameters: { REFRESH_TOKEN: session.refreshToken },
+    });
+    saveSession(session.username, data.AuthenticationResult);
+  }
+
+  async function getValidIdToken() {
+    if (!session) throw new Error('Not signed in.');
+    const nowSeconds = Date.now() / 1000;
+    if (session.idTokenExpiresAt <= nowSeconds + 60) {
+      await refreshIdToken(); // throws if the refresh token itself is expired/revoked
+    }
+    return session.idToken;
+  }
+
+  // --- Identity Pool: exchange the User Pool ID token for short-lived AWS credentials
+  // scoped to invoking this one Lambda (see terraform/cognito.tf's authenticated role). ---
+  async function fetchAwsCredentials(idToken) {
+    const identityPoolId = identityPoolIdEl.value.trim();
+    const userPoolId = userPoolIdEl.value.trim();
+    if (!identityPoolId || !userPoolId) throw new Error('Set the Cognito User Pool ID and Identity Pool ID above first.');
+
+    const loginsKey = `cognito-idp.${REGION}.amazonaws.com/${userPoolId}`;
+    const logins = { [loginsKey]: idToken };
+
+    const idResp = await fetch(`https://cognito-identity.${REGION}.amazonaws.com/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': 'AWSCognitoIdentityService.GetId' },
+      body: JSON.stringify({ IdentityPoolId: identityPoolId, Logins: logins }),
+    });
+    if (!idResp.ok) throw new Error(`Cognito GetId failed (${idResp.status}): ${await idResp.text()}`);
+    const { IdentityId } = await idResp.json();
+
+    const credResp = await fetch(`https://cognito-identity.${REGION}.amazonaws.com/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-amz-json-1.1', 'X-Amz-Target': 'AWSCognitoIdentityService.GetCredentialsForIdentity' },
+      body: JSON.stringify({ IdentityId, Logins: logins }),
+    });
+    if (!credResp.ok) throw new Error(`Cognito GetCredentialsForIdentity failed (${credResp.status}): ${await credResp.text()}`);
+    const { Credentials } = await credResp.json();
+    return Credentials; // { AccessKeyId, SecretKey, SessionToken, Expiration }
+  }
+
+  async function getAwsCredentials() {
+    const nowSeconds = Date.now() / 1000;
+    if (cachedAwsCredentials && cachedAwsCredentials.Expiration > nowSeconds + 60) {
+      return cachedAwsCredentials;
+    }
+    const idToken = await getValidIdToken();
+    cachedAwsCredentials = await fetchAwsCredentials(idToken);
+    return cachedAwsCredentials;
+  }
+
+  async function callBackend(body) {
+    const functionUrl = functionUrlEl.value.trim();
+    if (!functionUrl) throw new Error('Set the Lambda Function URL above first.');
+
+    const creds = await getAwsCredentials();
+    const aws = new AwsClient({
+      accessKeyId: creds.AccessKeyId,
+      secretAccessKey: creds.SecretKey,
+      sessionToken: creds.SessionToken,
+      service: 'lambda',
+      region: REGION,
+    });
+    const res = await aws.fetch(functionUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return res.json();
+  }
+
+  // --- Login/session UI wiring ---
+
+  function showChat() {
+    loginPanel.hidden = true;
+    chatPanel.hidden = false;
+    whoamiEl.textContent = `Signed in as ${session.username}`;
+  }
+
+  function showLogin() {
+    loginPanel.hidden = false;
+    chatPanel.hidden = true;
+    newPasswordSection.hidden = true;
+    loginForm.hidden = false;
+  }
+
+  loadSession();
+  if (session && session.refreshToken) {
+    showChat();
+  } else {
+    showLogin();
+  }
+
+  loginForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    loginStatusEl.textContent = 'Signing in…';
+    loginStatusEl.classList.remove('error');
+    try {
+      const result = await signIn(usernameEl.value.trim(), passwordEl.value);
+      if (result.challenge === 'NEW_PASSWORD_REQUIRED') {
+        loginForm.hidden = true;
+        newPasswordSection.hidden = false;
+        loginStatusEl.textContent = '';
+      } else {
+        loginStatusEl.textContent = '';
+        showChat();
+      }
+    } catch (err) {
+      loginStatusEl.textContent = err.message;
+      loginStatusEl.classList.add('error');
+    }
+  });
+
+  submitNewPasswordBtn.addEventListener('click', async () => {
+    loginStatusEl.textContent = 'Setting password…';
+    loginStatusEl.classList.remove('error');
+    try {
+      await completeNewPasswordChallenge(newPasswordEl.value);
+      loginStatusEl.textContent = '';
+      showChat();
+    } catch (err) {
+      loginStatusEl.textContent = err.message;
+      loginStatusEl.classList.add('error');
+    }
+  });
+
+  signOutBtn.addEventListener('click', () => {
+    clearSession();
+    logEl.innerHTML = '';
+    showLogin();
+  });
+
+  // --- Chat log rendering ---
+
+  function addMessage(text, cls) {
+    const div = document.createElement('div');
+    div.className = `msg ${cls}`;
+    div.textContent = text;
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+    return div;
+  }
+
+  function addErrorMessage(code, message) {
+    // out_of_scope is a graceful-degradation message, not an adversarial rejection -- style
+    // it as neutral/informational rather than alarming red.
+    const cls = code === 'out_of_scope' ? 'info' : 'error';
+    const div = document.createElement('div');
+    div.className = `msg ${cls}`;
+    const codeEl = document.createElement('span');
+    codeEl.className = 'code';
+    codeEl.textContent = code;
+    div.appendChild(codeEl);
+    div.appendChild(document.createTextNode(message));
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function addBotMessage(result, ctx) {
+    const div = document.createElement('div');
+    div.className = 'msg bot';
+    div.textContent = result.answer;
+
+    (result.warnings || []).forEach((w) => {
+      const warnDiv = document.createElement('div');
+      warnDiv.className = 'warning';
+      warnDiv.textContent = `⚠ ${w}`;
+      div.appendChild(warnDiv);
+    });
+
+    if (result.sources && result.sources.length) {
+      const details = document.createElement('details');
+      details.className = 'sources';
+      const summary = document.createElement('summary');
+      summary.textContent = `${result.sources.length} source chunk(s)`;
+      details.appendChild(summary);
+      result.sources.forEach((s) => {
+        const srcDiv = document.createElement('div');
+        srcDiv.className = 'src';
+        srcDiv.textContent = `[${s.score.toFixed(3)}] ${s.source_file} — ${s.excerpt}…`;
+        details.appendChild(srcDiv);
+      });
+      div.appendChild(details);
+    }
+
+    div.appendChild(buildFeedbackRow(result, ctx));
+
+    logEl.appendChild(div);
+    logEl.scrollTop = logEl.scrollHeight;
+  }
+
+  function buildFeedbackRow(result, ctx) {
+    const row = document.createElement('div');
+    row.className = 'feedback';
+
+    if (ctx.isRegeneration) {
+      // Already the one auto-regenerated attempt the backend allows -- offering another
+      // "No" here would just hit the server-side 429, so don't invite it.
+      row.textContent = 'Regenerated answer.';
+      return row;
+    }
+
+    const label = document.createElement('span');
+    label.textContent = 'Satisfied?';
+    const yesBtn = document.createElement('button');
+    yesBtn.textContent = 'Yes';
+    const noBtn = document.createElement('button');
+    noBtn.textContent = 'No';
+    row.append(label, yesBtn, noBtn);
+
+    const disable = () => { yesBtn.disabled = true; noBtn.disabled = true; };
+
+    yesBtn.addEventListener('click', async () => {
+      disable();
+      await sendFeedback(ctx, 'yes');
+      const ack = document.createElement('span');
+      ack.className = 'ack';
+      ack.textContent = 'Thanks!';
+      row.appendChild(ack);
+    });
+
+    noBtn.addEventListener('click', async () => {
+      disable();
+      await sendFeedback(ctx, 'no');
+      await regenerate(result, ctx);
+    });
+
+    return row;
+  }
+
+  async function sendFeedback(ctx, satisfied) {
+    try {
+      await callBackend({
+        action: 'feedback',
+        request_id: ctx.requestId,
+        query: ctx.query,
+        satisfied,
+      });
+    } catch (err) {
+      console.error('Feedback submission failed:', err);
+    }
+  }
+
+  async function regenerate(previousResult, ctx) {
+    const thinking = addMessage('Regenerating…', 'bot');
+    try {
+      const data = await callBackend({
+        action: 'ask',
+        request_id: crypto.randomUUID(),
+        query: ctx.query,
+        regenerate: true,
+        previous_answer: previousResult.answer,
+        regenerate_count: 1,
+      });
+      thinking.remove();
+      if (data.status === 'ok') {
+        addBotMessage(data, { query: ctx.query, requestId: data.request_id, isRegeneration: true });
+      } else {
+        addErrorMessage(data.code || 'error', data.message || 'Could not regenerate an answer.');
+      }
+    } catch (err) {
+      thinking.remove();
+      addErrorMessage('network_error', `Could not reach the backend: ${err.message}`);
+    }
+  }
+
+  // --- Ask flow ---
+
+  formEl.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const query = queryEl.value.trim();
+    if (!query) return;
+
+    addMessage(query, 'user');
+    queryEl.value = '';
+    submitEl.disabled = true;
+    const thinking = addMessage('Thinking…', 'bot');
+    const requestId = crypto.randomUUID();
+
+    try {
+      const data = await callBackend({ action: 'ask', request_id: requestId, query });
+      thinking.remove();
+
+      if (data.status === 'ok') {
+        addBotMessage(data, { query, requestId: data.request_id, isRegeneration: false });
+      } else {
+        addErrorMessage(data.code || 'error', data.message || 'Request was rejected.');
+      }
+    } catch (err) {
+      thinking.remove();
+      addErrorMessage('network_error', `Could not reach the backend: ${err.message}`);
+    } finally {
+      submitEl.disabled = false;
+      queryEl.focus();
+    }
+  });
+</script>
+</body>
+</html>
