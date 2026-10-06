@@ -93,7 +93,7 @@ terraform apply   # SageMaker endpoint -- real money starts here
 ```
 
 **Create your login** (no public sign-up — this is the one-time setup for yourself). Pick your
-own username/password at the prompts below — don't commit real credentials to this repo:
+own username/password at the prompts below:
 ```bash
 POOL_ID=$(terraform output -raw cognito_user_pool_id)
 read -rp "Username: " CHATBOT_USERNAME
